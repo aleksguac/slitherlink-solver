@@ -221,6 +221,33 @@ bool check_solution(Grid* grid, char* known_solution) {
   }
 
   for (int i = 0; i < n_nibbles; i++) sprintf(&solution_string[i], "%X", solution_bytes[i]);
-  
+
   return strncmp(solution_string, known_solution, n_nibbles) == 0;
+}
+
+bool check_partial_solution(Grid* grid, char* known_solution) {
+  int n_errors = 0;
+  int errors[MAXEDGES] = {0};
+  if (known_solution == NULL || grid == NULL) { printf("Missing grid or solution\n"); return false; }
+  int n_nibbles = grid->n_edges / 4 + (grid->n_edges % 4 > 0);
+  int nibble;
+  for (int i = 0; i < n_nibbles; i++) {
+    if (known_solution[i] == 0) { printf("Solution string is too short\n"); return false; }
+    if ('0' <= known_solution[i] && known_solution[i] <= '9') {
+      nibble = known_solution[i] - '0';
+    } else if ('A' <= known_solution[i] && known_solution[i] <= 'F') {
+      nibble = known_solution[i] - 'A' + 10;
+    } else { printf("Incorrect character in solution string\n"); return false; }
+
+    for (int j = 0; j < 4; j++) {
+      if (i*4 + j >= grid->n_edges) break;
+      if (grid->edges[i*4 + j] != Empty && grid->edges[i*4 + j] != nibble % 2) errors[n_errors++] = i*4 + j;
+      nibble >>= 1;
+    }
+  }
+
+  if (n_errors) printf("Errors at edge indices: ");
+  for (int i = 0; i < n_errors; i++) { printf("%d ", errors[i]); }
+  if (n_errors) printf("\n\n");
+  return n_errors == 0;
 }
