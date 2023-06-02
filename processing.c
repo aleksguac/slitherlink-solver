@@ -185,14 +185,11 @@ bool cross_innie_on_two(Patch* patch) {
           e1 = flip(e1);
           e2 = flip(e2);
           if (tally.crosses[e] == e1 && *patch->edges[e2] == Empty) {
-            // printf("%3d %d %d   %d %d\n", patch->index, e1, e2, *patch->edges[e1], *patch->edges[e2]);
-            // TODO
-            // *patch->edges[e2] = Line;
-            // changed = true;
+            *patch->edges[e2] = Line;
+            changed = true;
           } else if (tally.crosses[e] == e2 && *patch->edges[e1] == Empty) {
-            // printf("%3d %d %d   %d %d\n", patch->index, e1, e2, *patch->edges[e1], *patch->edges[e2]);
-            // *patch->edges[e1] = Line;
-            // changed = true;
+            *patch->edges[e1] = Line;
+            changed = true;
           }
         }
       }
