@@ -253,11 +253,11 @@ bool either_ors_from_patch(Patch* patch) {
     if (dir != -1) {
       if (patch->neighbour_nodes[dir]->edges[e1] != NULL && *patch->neighbour_nodes[dir]->edges[e1] == Empty) {
         if (patch->neighbour_nodes[dir]->edges[e2] == NULL || *patch->neighbour_nodes[dir]->edges[e2] == Cross) { *patch->neighbour_nodes[dir]->edges[e1] = Line; changed = true; }
-        else if (patch->neighbour_nodes[dir]->edges[e2] != NULL && *patch->neighbour_nodes[dir]->edges[e2] == Line) { *patch->neighbour_nodes[dir]->edges[e1] = Line; changed = true; }
+        else if (patch->neighbour_nodes[dir]->edges[e2] != NULL && *patch->neighbour_nodes[dir]->edges[e2] == Line) { *patch->neighbour_nodes[dir]->edges[e1] = Cross; changed = true; }
       }
       if (patch->neighbour_nodes[dir]->edges[e2] != NULL && *patch->neighbour_nodes[dir]->edges[e2] == Empty) {
         if (patch->neighbour_nodes[dir]->edges[e1] == NULL || *patch->neighbour_nodes[dir]->edges[e1] == Cross) { *patch->neighbour_nodes[dir]->edges[e2] = Line; changed = true; }
-        else if (patch->neighbour_nodes[dir]->edges[e1] != NULL && *patch->neighbour_nodes[dir]->edges[e1] == Line) { *patch->neighbour_nodes[dir]->edges[e2] = Line; changed = true; }
+        else if (patch->neighbour_nodes[dir]->edges[e1] != NULL && *patch->neighbour_nodes[dir]->edges[e1] == Line) { *patch->neighbour_nodes[dir]->edges[e2] = Cross; changed = true; }
       }
 
       if (patch->corner_patches[dir] != NULL) {
@@ -509,8 +509,8 @@ bool fill_once(Grid* grid, bool debug, bool* finished) {
     changed |= corner_threes(patch);
     DEBUG("corner_on_a_three");
     changed |= corner_on_a_three(patch);
-    // DEBUG("either_ors_from_patch");
-    // changed |= either_ors_from_patch(patch);
+    DEBUG("either_ors_from_patch");
+    changed |= either_ors_from_patch(patch);
     DEBUG("cross_innie_on_two");
     changed |= cross_innie_on_two(patch);
   }
