@@ -48,6 +48,7 @@ int main() {
     while (fill_once(&grid, false, &finished)) {}
     if (!finished || !(puzzles[i].solved = check_solution(&grid, puzzles[i].solution))) {
       print_grid(&grid, puzzles[i].size, true, false);
+      if (finished) printf("Solution doesn't match but only one loop exists and all edges are filled\n");
       check_partial_solution(&grid, puzzles[i].solution);
     }
   }

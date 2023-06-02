@@ -86,7 +86,6 @@ void make_grid(Grid* grid, char* input, int size[2], int max_value) {
     patch->filled = false;
     patch->colour = Unshaded;
 
-    // TODO: this section only works for square grid
     patch->n_corner_patches = 4;
     patch->n_neighbour_nodes = 4;
     patch->n_neighbour_patches = 4;
@@ -124,15 +123,12 @@ void make_grid(Grid* grid, char* input, int size[2], int max_value) {
     patch->neighbour_nodes[1]->neighbour_patches[3] = patch;
     patch->neighbour_nodes[2]->neighbour_patches[0] = patch;
     patch->neighbour_nodes[3]->neighbour_patches[1] = patch;
-
-    // END TODO
   }
   for (int n = 0; n < (size[0] + 1) * (size[1] + 1); n++) {
     Node* node = &grid->nodes[n];
     node->filled = false;
     node->index = n;
 
-    // TODO: this section only works for square grid
     node->n_edges = 4;
     node->n_neighbour_nodes = 4;
     node->n_neighbour_patches = 4;
@@ -143,15 +139,10 @@ void make_grid(Grid* grid, char* input, int size[2], int max_value) {
       int in = neighbour_nodes_inds[i];
       node->neighbour_nodes[i] = in >= 0 && in < (size[0] + 1) * (size[1] + 1) && !(i == 1 && in % (size[0] + 1) == 0) && !(i == 3 && in % (size[0] + 1) == (size[0] + 1) - 1) ? &grid->nodes[in] : NULL;
     }
-    // END TODO
   }
-  // for (int e = 0; e < edge_counter; e++) {
-  //   grid->edges[e] = Empty;
-  // }
   grid->n_patches = size[0] * size[1];
   grid->n_nodes = (size[0] + 1) * (size[1] + 1);
   grid->n_edges = edge_counter;
-  // return grid;
 }
 
 void print_grid(Grid* grid, int size[2], bool shading, bool number_nodes) {

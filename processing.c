@@ -237,7 +237,6 @@ bool either_ors(Patch* patch, int dir) {
   return changed;
 }
 
-// TODO - fix, causing segfault somewhere
 bool either_ors_from_patch(Patch* patch) {
   bool changed = false;
   Tally tally = {0};
@@ -354,7 +353,6 @@ bool check_loops(Grid* grid, bool* finished) {
   int n_loop_closers = 0;
   int n_open_loops = 0;
   int n_closed_loops = 0; // TODO: use this to check for correctness
-  // TODO: encrypt solution once finished (using krazydad method or otherwise)
 
   Node* node;
   int n_empty_edges = 0;
