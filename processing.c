@@ -172,8 +172,7 @@ bool corner_threes(Patch* patch) {
 
 bool cross_innie_on_two(Patch* patch) {
   bool changed = false;
-  Tally tally = {0};
-  Tally node_tally = {0};
+  Tally tally = {0}, node_tally = {0};
   int e1, e2;
   if (patch->value == 2) {
     tally_patch(patch, &tally);
@@ -196,6 +195,37 @@ bool cross_innie_on_two(Patch* patch) {
     }
   }
   return false;
+}
+
+bool cross_out_opposites_on_two(Patch* patch, int dir, int e1, int e2) {
+  bool changed = false;
+  if (patch->neighbour_nodes[dir]->edges[e1] != NULL && *patch->neighbour_nodes[dir]->edges[e1] == Empty) { *patch->neighbour_nodes[dir]->edges[e1] = Cross; changed = true; }
+  if (patch->neighbour_nodes[dir]->edges[e2] != NULL && *patch->neighbour_nodes[dir]->edges[e2] == Empty) { *patch->neighbour_nodes[dir]->edges[e2] = Cross; changed = true; }
+  if (patch->neighbour_nodes[flip(dir)]->edges[flip(e1)] != NULL && *patch->neighbour_nodes[flip(dir)]->edges[flip(e1)] == Empty) { *patch->neighbour_nodes[flip(dir)]->edges[flip(e1)] = Cross; changed = true; }
+  if (patch->neighbour_nodes[flip(dir)]->edges[flip(e2)] != NULL && *patch->neighbour_nodes[flip(dir)]->edges[flip(e2)] == Empty) { *patch->neighbour_nodes[flip(dir)]->edges[flip(e2)] = Cross; changed = true; }
+  return changed;
+}
+
+bool opposite_innies_on_two(Patch* patch) {
+  bool changed = false;
+  Tally tally = {0}, node1_tally = {0}, node2_tally = {0};
+  tally_patch(patch, &tally);
+  if (patch->value == 2 && tally.n_empties == 4) {
+    int e1, e2;
+    tally_node(patch->neighbour_nodes[0], &node1_tally);
+    tally_node(patch->neighbour_nodes[2], &node2_tally);
+    if (node1_tally.n_lines == 1 && node2_tally.n_lines == 1) {
+      get_edges_from_diagonal(0, &e1, &e2);
+      changed = cross_out_opposites_on_two(patch, 0, e1, e2);
+    }
+    tally_node(patch->neighbour_nodes[1], &node1_tally);
+    tally_node(patch->neighbour_nodes[3], &node2_tally);
+    if (node1_tally.n_lines == 1 && node2_tally.n_lines == 1) {
+      get_edges_from_diagonal(1, &e1, &e2);
+      changed = cross_out_opposites_on_two(patch, 1, e1, e2);
+    }
+  }
+  return changed;
 }
 
 bool either_ors(Patch* patch, int dir) {
@@ -430,7 +460,8 @@ bool check_loops(Grid* grid, bool* finished) {
   return changed;
 }
 
-void shade(Grid* grid) {
+bool shade(Grid* grid) {
+  bool changed = false;
   for (int p = 0; p < grid->n_patches; p++) {
     Patch* patch = &grid->patches[p];
     for (int i = 0; i < patch->n_neighbour_patches; i++) {
@@ -444,12 +475,15 @@ void shade(Grid* grid) {
       } else if (patch->colour != Unshaded && patch->neighbour_patches[i] != NULL && patch->neighbour_patches[i]->colour != Unshaded) {
         // fill edge if two neighbours are shaded
         *patch->edges[i] = patch->colour == patch->neighbour_patches[i]->colour ? Cross : Line;
+        changed = true;
       } else if (patch->colour != Unshaded && patch->neighbour_patches[i] == NULL) {
         // fill edge if on boundary and current patch is shaded
         *patch->edges[i] = patch->colour == In ? Line : Cross;
+        changed = true;
       }
     }
   }
+  return changed;
 }
 
 bool clean_up(Grid* grid) {
@@ -473,7 +507,7 @@ bool clean_up(Grid* grid) {
       }
     }
   }
-  
+
   for (int n = 0; n < grid->n_nodes; n++) {
     Node* node = &grid->nodes[n];
     tally_node(node, &tally);
@@ -508,6 +542,8 @@ bool fill_once(Grid* grid, bool debug, bool* finished) {
     changed |= either_ors_from_patch(patch);
     DEBUG("cross_innie_on_two");
     changed |= cross_innie_on_two(patch);
+    DEBUG("opposite_innies_on_two");
+    changed |= opposite_innies_on_two(patch);
   }
   
   for (int n = 0; n < grid->n_nodes; n++) {
@@ -523,6 +559,6 @@ bool fill_once(Grid* grid, bool debug, bool* finished) {
   DEBUG("check_loops");
   changed |= check_loops(grid, finished);
   DEBUG("shade");
-  shade(grid);
+  changed |= shade(grid);
   return changed;
 }
