@@ -31,7 +31,6 @@ typedef struct Node {
   unsigned int n_neighbour_nodes;
   struct Patch* neighbour_patches[MAXNEIGHBOURS];
   unsigned int n_neighbour_patches;
-  bool filled;
 } Node;
 
 typedef struct Patch {
@@ -45,7 +44,6 @@ typedef struct Patch {
   unsigned int n_corner_patches;
   struct Node* neighbour_nodes[MAXNEIGHBOURS];
   unsigned int n_neighbour_nodes;
-  bool filled;
   Colour colour;
 } Patch;
 
@@ -83,7 +81,6 @@ void make_grid(Grid* grid, char* input, int size[2], int max_value) {
     }
     patch->value = value;
     patch->index = p;
-    patch->filled = false;
     patch->colour = Unshaded;
 
     patch->n_corner_patches = 4;
@@ -126,7 +123,6 @@ void make_grid(Grid* grid, char* input, int size[2], int max_value) {
   }
   for (int n = 0; n < (size[0] + 1) * (size[1] + 1); n++) {
     Node* node = &grid->nodes[n];
-    node->filled = false;
     node->index = n;
 
     node->n_edges = 4;

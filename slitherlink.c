@@ -39,32 +39,45 @@ Puzzle puzzles[] = {
   {{27, 15}, 2, ".2231...2..3...2..2233..23.1..3...33213.22222.1......2.122.22.2...122...1..2333.3.2.2.2..3..22.1..22...2....3..2...2..3.....2......3..3.2.22.....3.3.2.....323.212222.22..3....0......2.2.......23...02.231..1..1..22.3..1...2.332.2..23.32.3.221...2..1.....1.1...........2..31.12.3...23...3.31.2.322..23.1...122...2..1...21..3..1.0.2.22.2.....20.23.2...2.23221.23.32222.3.312111.1.2...23.2.22...23...2.2..22.1", "935375A357A9ADEC376E13FCE2EA4D1119DAA9C569A27579253BCC21D2E436B6E93769D52E5AC4513D33D939989867A84AA361E4AC01F2015EA25B9773C979565892144C056E8AAAACCDD53766CD55D905D13C9A0DE2AC9A8558CD19E5B05FAAAA4D01CFD9AEDDD9A77E0", false},
 };
 
-int main() {
-  bool finished;
-  for (int i = 0; i < n_puzzles; i++) {
-    finished = false;
-    Grid grid = {0};
-    make_grid(&grid, puzzles[i].input, puzzles[i].size, 3);
-    while (fill_once(&grid, false, &finished)) {}
-    if (!finished || !(puzzles[i].solved = check_solution(&grid, puzzles[i].solution))) {
-      print_grid(&grid, puzzles[i].size, true, false);
-      if (finished) printf("Solution doesn't match but only one loop exists and all edges are filled\n");
-      check_partial_solution(&grid, puzzles[i].solution);
-    }
-  }
+// TODO: add segfault protections everywhere
 
+void summarise() {
   int count = 0;
   printf("Solved:\n");
   for (int i = 0; i < n_puzzles; i++) {
-    if (puzzles[i].solved) { printf("%dx%d diff %x, ", puzzles[i].size[0], puzzles[i].size[1], puzzles[i].difficulty); count++; }
+    if (puzzles[i].solved) {
+      printf("%dx%d diff %d, ", puzzles[i].size[0], puzzles[i].size[1], puzzles[i].difficulty);
+      count++;
+      if (count % 12 == 0) printf("\n");
+    }
   }
-  printf("\b\b (total = %d)\n\n", count);
+  printf("\b\b | (total = %d)\n\n", count);
 
   count = 0;
   printf("To do:\n");
   for (int i = 0; i < n_puzzles; i++) {
-    if (!puzzles[i].solved) { printf("%dx%d diff %x, ", puzzles[i].size[0], puzzles[i].size[1], puzzles[i].difficulty); count++; }
+    if (!puzzles[i].solved) { printf("%dx%d diff %d, ", puzzles[i].size[0], puzzles[i].size[1], puzzles[i].difficulty); count++; }
   }
-  printf("\b\b (total = %d)\n", count);
+  printf("\b\b | (total = %d)\n", count);
+}
+
+int main() {
+  bool finished, valid;
+  int edges;
+  for (int i = 0; i < n_puzzles; i++) {
+    finished = false;
+    valid = false;
+    Grid grid = {0};
+    make_grid(&grid, puzzles[i].input, puzzles[i].size, 3);
+    edges = grid.n_edges;
+    while (fill_once(&grid, false, &finished, &valid, &edges));
+    if (!finished || !(puzzles[i].solved = check_solution(&grid, puzzles[i].solution))) {
+      print_grid(&grid, puzzles[i].size, true, false);
+      if (finished && valid) printf("Solution doesn't match but only one loop exists and all edges are filled\n");
+      check_partial_solution(&grid, puzzles[i].solution);
+    }
+  }
+
+  summarise();
   return 0;
 }

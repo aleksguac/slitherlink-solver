@@ -5,7 +5,7 @@
 #include "structures.c"
 
 // TODO: do more variety slitherlinks to figure out which rules can still work and how to modify them
-// TODO: try move and see if immediately illegal?
+// TODO: try move and see if immediately illegal? done for some things
 // TODO: split this file into logically-grouped sections
 // TODO: add more comments explaining what everything is doing in case i forget
 
@@ -59,7 +59,7 @@ void tally_node(Node* node, Tally* tally) {
       } else if (*edge == Empty) {
         tally->empties[tally->n_empties++] = e;
       } else {
-        printf("Incorrect edge");
+        printf("Incorrect edge %d\n", *edge);
       }
     }
   }
@@ -114,12 +114,13 @@ bool list_contains_node(Node* node, Node** list, int list_len) {
 /* PER-PATCH FUNCTIONS */
 bool fill_zero(Patch* patch) {
   bool changed = false;
-  if (!patch->filled && patch->value == 0) {
+  Tally tally = {0};
+  tally_patch(patch, &tally);
+  if (patch->value == 0 && tally.n_empties != 0) {
     for (int e = 0; e < patch->n_edges; e++) {
       *patch->edges[e] = Cross;
       changed = true;
     }
-    patch->filled = true;
   }
   return changed;
 }
@@ -193,6 +194,19 @@ bool cross_innie_on_two(Patch* patch) {
         }
       }
     }
+    if (tally.n_crosses == 0) {
+      for (int n = 0; n < patch->n_neighbour_nodes; n++) {
+        Node* node = patch->neighbour_nodes[n];
+        get_edges_from_diagonal(n, &e1, &e2);
+        if ((node->edges[e1] != NULL && node->edges[e2] != NULL) &&
+            ((*node->edges[e1] == Line && *node->edges[e2] == Empty) || (*node->edges[e2] == Line && *node->edges[e1] == Empty))) {
+          // printf("wo %d\n", node->index);
+          Patch* next_patch = patch;
+          while (next_patch->value == 2 && next_patch->corner_patches[flip(n)] != NULL && !(next_patch->edges[flip(e1)] == Cross || next_patch->edges[flip(e2)] == Cross)) next_patch = next_patch->corner_patches[flip(n)];
+          if (next_patch->edges[flip(e1)] == Cross || next_patch->edges[flip(e2)] == Cross) printf("%d\n", node->index);
+        }
+      }
+    }
   }
   return false;
 }
@@ -225,6 +239,31 @@ bool opposite_innies_on_two(Patch* patch) {
       changed = cross_out_opposites_on_two(patch, 1, e1, e2);
     }
   }
+  return changed;
+}
+
+bool two_with_diagonal_three_and_opposite_innie(Patch* patch) {
+  bool changed = false;
+  Tally tally = {0}, node_tally = {0};
+  tally_patch(patch, &tally);
+  int e1, e2;
+
+  if (patch->value == 2 && tally.n_lines == 0) {
+    for (int dir = 0; dir < patch->n_neighbour_nodes; dir++) {
+      Node* node = patch->neighbour_nodes[dir];
+      tally_node(node, &node_tally);
+      if (node_tally.n_lines == 1 && patch->corner_patches[flip(dir)] != NULL) {
+        Patch* diag_patch = patch->corner_patches[flip(dir)];
+        while (diag_patch->value == 2 && diag_patch->corner_patches[flip(dir)] != NULL) diag_patch = diag_patch->corner_patches[flip(dir)];
+        if (diag_patch->value == 3) {
+          get_edges_from_diagonal(dir, &e1, &e2);
+          if (node->edges[e1] != NULL && *node->edges[e1] == Empty) { *node->edges[e1] = Cross; changed = true; }
+          if (node->edges[e2] != NULL && *node->edges[e2] == Empty) { *node->edges[e2] = Cross; changed = true; }
+        }
+      }
+    }
+  }
+
   return changed;
 }
 
@@ -335,32 +374,49 @@ bool bound_at_corner(Node* node) {
   bool changed = false;
   Tally tally = {0};
   tally_node(node, &tally);
+  int e1, e2;
+  Patch *patch, *diag_patch;
   if (tally.n_empties == 2 && tally.n_lines == 0) {
     int dir = get_diagonal_from_edges(tally.empties[0], tally.empties[1]);
     if (dir != -1 && node->neighbour_patches[dir]->value != None) {
-      int value = node->neighbour_patches[dir]->value;
-      if (value == 3 || value == 1) {
-        *node->edges[tally.empties[0]] = value == 3 ? Line : Cross;
-        *node->edges[tally.empties[1]] = value == 3 ? Line : Cross;
+      patch = node->neighbour_patches[dir];
+      if (patch->value == 3 || patch->value == 1) {
+        *node->edges[tally.empties[0]] = patch->value == 3 ? Line : Cross;
+        *node->edges[tally.empties[1]] = patch->value == 3 ? Line : Cross;
         changed = true;
-      } else if (value == 2) {
+      } else if (patch->value == 2) {
         for (int i = 0; i < 2; i++) {
           Edge* edge1 = node->neighbour_nodes[tally.empties[i]]->edges[tally.empties[i]];
           Edge* edge2 = node->neighbour_nodes[tally.empties[i]]->edges[flip(tally.empties[i^1])];
           if (edge1 != NULL && *edge1 == Empty && (edge2 == NULL || *edge2 == Cross)) { *edge1 = Line; changed = true; }
+          if (edge1 != NULL && *edge1 == Line && edge2 != NULL && *edge2 == Empty) { *edge2 = Cross; changed = true; }
           if (edge2 != NULL && *edge2 == Empty && (edge1 == NULL || *edge1 == Cross)) { *edge2 = Line; changed = true; }
+          if (edge2 != NULL && *edge2 == Line && edge1 != NULL && *edge1 == Empty) { *edge1 = Cross; changed = true; }
         }
-        if (node->neighbour_patches[dir] != NULL && node->neighbour_patches[dir]->corner_patches[dir] != NULL) {
-          Patch* diag_patch = node->neighbour_patches[dir]->corner_patches[dir];
+        if (patch->corner_patches[dir] != NULL) {
+          diag_patch = patch->corner_patches[dir];
           while (diag_patch->value == 2 && diag_patch->corner_patches[dir] != NULL) diag_patch = diag_patch->corner_patches[dir];
           if (diag_patch->value == 1 || diag_patch->value == 3) {
-            int e1 = flip(tally.empties[0]);
-            int e2 = flip(tally.empties[1]);
+            e1 = flip(tally.empties[0]);
+            e2 = flip(tally.empties[1]);
             if (*node->edges[tally.empties[0]] == Empty && diag_patch->value == 3) { *node->edges[tally.empties[0]] = Line; changed = true; }
             if (*node->edges[tally.empties[1]] == Empty && diag_patch->value == 3) { *node->edges[tally.empties[1]] = Line; changed = true; }
             if (*diag_patch->edges[e1] == Empty) { *diag_patch->edges[e1] = diag_patch->value == 3 ? Line : Cross; changed = true; }
             if (*diag_patch->edges[e2] == Empty) { *diag_patch->edges[e2] = diag_patch->value == 3 ? Line : Cross; changed = true; }
           }
+
+          Node* diag_node = patch->neighbour_nodes[dir];
+          e1 = tally.empties[0];
+          e2 = tally.empties[1];
+          while (diag_node->neighbour_patches[dir]->value == 2 && diag_node->neighbour_patches[dir]->corner_patches[dir] != NULL && !((*diag_node->edges[e1] != Empty && *diag_node->edges[e2] == Empty) || (*diag_node->edges[e2] != Empty && *diag_node->edges[e1] == Empty))) diag_node = diag_node->neighbour_patches[dir]->neighbour_nodes[dir];
+          if (*diag_node->edges[e1] != Empty && *diag_node->edges[e2] == Empty) { *diag_node->edges[e2] = *diag_node->edges[e1] == Line ? Line : Cross; changed = true; }
+          if (*diag_node->edges[e2] != Empty && *diag_node->edges[e1] == Empty) { *diag_node->edges[e1] = *diag_node->edges[e2] == Line ? Line : Cross; changed = true; }
+        }
+        if ((*patch->edges[tally.empties[0]] == Line) || (*patch->edges[tally.empties[1]] == Line)) {
+          e1 = tally.empties[0];
+          e2 = tally.empties[1];
+          if (*patch->edges[e1] == Line && *patch->edges[e2] == Empty) { *patch->edges[e2] = Line; changed = true; }
+          if (*patch->edges[e2] == Line && *patch->edges[e1] == Empty) { *patch->edges[e1] = Line; changed = true; }
         }
       }
     }
@@ -369,7 +425,7 @@ bool bound_at_corner(Node* node) {
 }
 
 /* FINAL GRID-WIDE CLEANUP FUNCTIONS */
-bool check_loops(Grid* grid, bool* finished) {
+bool check_loops(Grid* grid, bool* finished, bool* valid, int* edges_left) {
   bool changed = false;
   *finished = false;
 
@@ -403,8 +459,8 @@ bool check_loops(Grid* grid, bool* finished) {
           next = next->neighbour_nodes[tally.lines[0]] == prev ? next->neighbour_nodes[tally.lines[1]] : next->neighbour_nodes[tally.lines[0]];
           prev = tmp;
           seen_nodes[n_seen_nodes++] = next;
-          tally_node(next, &tally);
-        } while (tally.n_lines != 1);
+          if (next != NULL) tally_node(next, &tally);
+        } while (tally.n_lines != 1 && next != NULL);
         n_open_loops++;
         if (list_contains_node(next, node->neighbour_nodes, node->n_neighbour_nodes)) {
           int dir = -1;
@@ -448,14 +504,16 @@ bool check_loops(Grid* grid, bool* finished) {
           next = next->neighbour_nodes[tally.lines[0]] == prev ? next->neighbour_nodes[tally.lines[1]] : next->neighbour_nodes[tally.lines[0]];
           prev = tmp;
           seen_nodes[n_seen_nodes++] = next;
-          tally_node(next, &tally);
-        } while (next != node);
+          if (next != NULL) tally_node(next, &tally);
+        } while (next != node && next != NULL);
         n_closed_loops++;
       }
     }
   }
 
-  if (!changed && n_closed_loops == 1 && n_empty_edges == 0) *finished = true;
+  *finished = !changed && n_closed_loops == 1 && n_empty_edges == 0;
+  *valid = (n_empty_edges == 0 && n_closed_loops == 1) || (n_empty_edges > 0 && n_closed_loops == 0); // TODO: check if this is actually true
+  if (edges_left != NULL) *edges_left = n_empty_edges;
 
   return changed;
 }
@@ -525,8 +583,9 @@ bool clean_up(Grid* grid) {
 }
 
 /* ONE ITERATION OF ALL FUNCTIONS*/
-bool fill_once(Grid* grid, bool debug, bool* finished) {
+bool fill_once(Grid* grid, bool debug, bool* finished, bool* valid, int* edges_left) {
   bool changed = false;
+  int edges_before = *edges_left;
   for (int p = 0; p < grid->n_patches; p++) {
     Patch* patch = &grid->patches[p];
     // TODO: have a tally of changes per rule
@@ -544,6 +603,8 @@ bool fill_once(Grid* grid, bool debug, bool* finished) {
     changed |= cross_innie_on_two(patch);
     DEBUG("opposite_innies_on_two");
     changed |= opposite_innies_on_two(patch);
+    DEBUG("two_with_diagonal_three_and_opposite_innie");
+    changed |= two_with_diagonal_three_and_opposite_innie(patch);
   }
   
   for (int n = 0; n < grid->n_nodes; n++) {
@@ -556,9 +617,10 @@ bool fill_once(Grid* grid, bool debug, bool* finished) {
 
   DEBUG("clean_up");
   changed |= clean_up(grid);
-  DEBUG("check_loops");
-  changed |= check_loops(grid, finished);
   DEBUG("shade");
   changed |= shade(grid);
-  return changed;
+  DEBUG("check_loops");
+  changed |= check_loops(grid, finished, valid, edges_left);
+  // return changed;
+  return edges_before - *edges_left;
 }
